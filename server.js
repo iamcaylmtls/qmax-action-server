@@ -1,77 +1,70 @@
-// server.js
-require('dotenv').config();
+// server.js — Q-MAX Action Server (Express)
 const express = require('express');
-const { Pool } = require('pg');
+const axios = require('axios');
+const bodyParser = require('body-parser');
 
 const app = express();
-app.use(express.json());
+app.use(bodyParser.json());
 
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL || null
-});
+const BLUEPRINTS = new Map(); // in-memory store (replace with real DB for production)
 
-// API key middleware - checks x-api-key OR Authorization: Bearer <key>
-function apiKeyMiddleware(req, res, next) {
-  const headerKey = req.headers['x-api-key'] || (req.headers.authorization && req.headers.authorization.split(' ')[1]);
-  const expected = process.env.ACTION_API_KEY;
-  if (!expected) {
-    console.warn('ACTION_API_KEY not set; rejecting requests by default.');
-    return res.status(500).json({ error: 'Server configuration error: ACTION_API_KEY missing' });
-  }
-  if (!headerKey || headerKey !== expected) {
-    return res.status(401).json({ error: 'Unauthorized' });
-  }
+function apiKeyMiddleware(req, res, next){
+  const expected = process.env.API_KEY || process.env.RENDER_API_KEY;
+  const header = (req.get('x-api-key') || req.query.api_key || '').toString();
+  if (!expected) return res.status(500).json({error:'server misconfigured: missing API key'});
+  if (header !== expected) return res.status(401).json({error:'invalid api key'});
   next();
 }
 
-// health
-app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
-
-// Validate blueprint (lightweight validation)
-app.post('/api/blueprint/validate', apiKeyMiddleware, (req, res) => {
-  const blueprint = req.body;
-  if (!blueprint || !blueprint.name || !blueprint.content) {
-    return res.status(400).json({ valid: false, reason: 'Missing name or content' });
-  }
-  // add simple checks here
-  const valid = typeof blueprint.name === 'string' && typeof blueprint.content === 'object';
-  return res.json({ valid, checks: { hasName: !!blueprint.name, contentType: typeof blueprint.content } });
+app.get('/health', (req, res) => {
+  res.json({ok:true, uptime: process.uptime(), timestamp: Date.now()});
 });
 
-// Save blueprint -> inserts into Postgres blueprints table
-app.post('/api/blueprint/save', apiKeyMiddleware, async (req, res) => {
-  const { name, content } = req.body;
-  if (!name || !content) return res.status(400).json({ error: 'Missing name or content' });
+// Save blueprint — returns id
+app.post('/saveBlueprint', apiKeyMiddleware, (req, res) => {
+  const blueprint = req.body.blueprint || req.body;
+  if (!blueprint || Object.keys(blueprint).length === 0) {
+    return res.status(400).json({ok:false, error:'missing blueprint'});
+  }
+  const id = (Date.now() + Math.floor(Math.random()*999)).toString();
+  BLUEPRINTS.set(id, {id, created: Date.now(), blueprint});
+  res.json({ok:true, id});
+});
+
+// Validate blueprint — basic sanity check (expand as needed)
+app.post('/validateBlueprint', apiKeyMiddleware, (req, res) => {
+  const bp = req.body.blueprint || req.body;
+  if (!bp) return res.status(400).json({ok:false, error:'missing blueprint'});
+  // minimal validation examples
+  const hasScreens = Array.isArray(bp.screens) && bp.screens.length>0;
+  const hasMeta = !!bp.meta;
+  res.json({ok:true, valid: hasScreens && hasMeta, issues: hasScreens && hasMeta ? [] : ['missing screens or meta']});
+});
+
+// List blueprint IDs
+app.get('/listBlueprints', apiKeyMiddleware, (req, res) => {
+  const list = Array.from(BLUEPRINTS.values()).map(b=>({id:b.id, created:b.created}));
+  res.json({ok:true, count:list.length, list});
+});
+
+// Forward to CreateAnything/Core AI (optional) — stub
+app.post('/sendToCA', apiKeyMiddleware, async (req, res) => {
+  const caUrl = process.env.CA_ENDPOINT;
+  if (!caUrl) return res.status(400).json({ok:false, error:'missing CA_ENDPOINT'});
   try {
-    const result = await pool.query(
-      `INSERT INTO blueprints (name, content, created_at) VALUES ($1, $2, now()) RETURNING id, created_at`,
-      [name, content]
-    );
-    res.json({ ok: true, id: result.rows[0].id, created_at: result.rows[0].created_at });
-  } catch (err) {
-    console.error('save error', err);
-    res.status(500).json({ error: 'db_error', details: err.message });
+    const r = await axios.post(caUrl, req.body, {timeout:15000});
+    res.json({ok:true, caResponse: r.data});
+  } catch(err){
+    res.status(502).json({ok:false,error:'CA forward failed', detail: err.message});
   }
 });
 
-// lightweight endpoint to trigger DB provisioning (optional, guarded)
-app.post('/api/admin/provision-db', apiKeyMiddleware, async (req, res) => {
-  try {
-    const sql = `
-      CREATE TABLE IF NOT EXISTS blueprints (
-        id SERIAL PRIMARY KEY,
-        name TEXT NOT NULL,
-        content JSONB NOT NULL,
-        created_at TIMESTAMP WITH TIME ZONE DEFAULT now()
-      );
-    `;
-    await pool.query(sql);
-    res.json({ ok: true, msg: 'provisioned' });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message });
-  }
+// Build event logger
+app.post('/logBuildEvent', apiKeyMiddleware, (req, res) => {
+  const event = req.body || {};
+  console.log('BUILD EVENT', JSON.stringify(event).slice(0,2000));
+  res.json({ok:true});
 });
 
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('qmax action server listening on', PORT));
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => console.log(`Q-MAX action server listening on ${PORT}`));
