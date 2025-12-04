@@ -1,0 +1,285 @@
+{
+  "samples": [
+    {
+      "id": "bp-minimal-001",
+      "name": "Minimal Screen (Test)",
+      "version": "1.0",
+      "meta": {
+        "author": "Cay / Q-MAX",
+        "created_at": "2025-12-03T00:00:00Z",
+        "purpose": "Sanity-check / smoke test for validator and CA proxy"
+      },
+      "screens": [
+        {
+          "id": "screen-root",
+          "name": "Root Test Screen",
+          "type": "page",
+          "layout": {
+            "template": "single-column",
+            "spacing": "md"
+          },
+          "components": [
+            {
+              "id": "title-1",
+              "type": "text",
+              "props": {
+                "text": "NeurAI — Minimal Test",
+                "style_token": "heading.xl"
+              }
+            },
+            {
+              "id": "cta-1",
+              "type": "button",
+              "props": {
+                "label": "Run Validate",
+                "variant": "primary",
+                "onClick": {
+                  "action": "api_call",
+                  "endpoint": "/validateBlueprint",
+                  "method": "POST",
+                  "bodyRef": "$thisBlueprint"
+                }
+              }
+            }
+          ]
+        }
+      ],
+      "buildPrompt": "Create a single-column test page with a heading and a primary action button. Use default NeurAI token styles."
+    },
+
+    {
+      "id": "bp-dashboard-001",
+      "name": "Power Dashboard — Desktop",
+      "version": "1.2",
+      "meta": {
+        "author": "Cay / Q-MAX",
+        "created_at": "2025-12-03T00:00:00Z",
+        "tags": ["dashboard", "admin", "insights"],
+        "audience": "power_users"
+      },
+      "screens": [
+        {
+          "id": "dash-home",
+          "name": "Dashboard Home",
+          "type": "page",
+          "layout": {
+            "template": "grid-12",
+            "columns": 12,
+            "breakpoints": { "lg": 12, "md": 8, "sm": 1 }
+          },
+          "regions": {
+            "header": { "cols": 12 },
+            "sidebar": { "cols": 3 },
+            "main": { "cols": 9 }
+          },
+          "components": [
+            {
+              "id": "hdr-1",
+              "type": "header",
+              "props": {
+                "title": "NeurAI Insights",
+                "subtitle": "Real-time grants intelligence & signals",
+                "leftIcon": "logo",
+                "rightActions": ["profile", "notifications"],
+                "style_token": "header.compact"
+              }
+            },
+            {
+              "id": "nav-1",
+              "type": "nav_vertical",
+              "region": "sidebar",
+              "props": {
+                "items": [
+                  { "id": "nav-home", "label": "Home", "icon": "home" },
+                  { "id": "nav-search", "label": "Search", "icon": "search" },
+                  { "id": "nav-saved", "label": "Saved", "icon": "bookmark" }
+                ],
+                "style_token": "nav.sidebar"
+              }
+            },
+            {
+              "id": "kpi-row",
+              "type": "grid",
+              "region": "main",
+              "props": {
+                "columns": 3,
+                "gutter": "sm",
+                "children": [
+                  {
+                    "type": "card",
+                    "id": "kpi-open",
+                    "props": {
+                      "title": "Open RFPs",
+                      "valueBinding": "data.open_rfps_count",
+                      "trend": "+12%",
+                      "style_token": "card.kpi"
+                    }
+                  },
+                  {
+                    "type": "card",
+                    "id": "kpi-matches",
+                    "props": {
+                      "title": "Matches Today",
+                      "valueBinding": "data.match_count",
+                      "trend": "-3%",
+                      "style_token": "card.kpi"
+                    }
+                  },
+                  {
+                    "type": "card",
+                    "id": "kpi-alerts",
+                    "props": {
+                      "title": "Alerts",
+                      "valueBinding": "data.alert_count",
+                      "style_token": "card.kpi.warning"
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "id": "insights-1",
+              "type": "chart",
+              "region": "main",
+              "props": {
+                "chartType": "area",
+                "dataBinding": "data.trend_series",
+                "height": 260,
+                "style_token": "chart.default"
+              }
+            },
+            {
+              "id": "results-list",
+              "type": "list",
+              "region": "main",
+              "props": {
+                "title": "Top Matches",
+                "dataBinding": "data.top_matches",
+                "itemTemplate": {
+                  "title": "{{title}}",
+                  "meta": "{{agency}} • {{deadline}}",
+                  "actions": [
+                    { "label": "Open", "action": "navigate", "target": "/detail/{{id}}" },
+                    { "label": "Save", "action": "api_call", "endpoint": "/logBuildEvent", "method": "POST", "body": { "evt": "save", "id": "{{id}}" } }
+                  ]
+                },
+                "style_token": "list.results"
+              }
+            }
+          ],
+          "dataSources": {
+            "fetchOverview": {
+              "type": "api",
+              "method": "GET",
+              "endpoint": "/api/insights/overview",
+              "refresh": 60
+            }
+          }
+        }
+      ],
+      "dataBindings": {
+        "data.open_rfps_count": 124,
+        "data.match_count": 27,
+        "data.alert_count": 3,
+        "data.trend_series": [
+          ["2025-11-24", 10],
+          ["2025-11-25", 12],
+          ["2025-11-26", 15],
+          ["2025-11-27", 13]
+        ],
+        "data.top_matches": [
+          { "id": "r1", "title": "Community Health Grant", "agency": "Alberta Health", "deadline": "2026-01-15" },
+          { "id": "r2", "title": "Innovation Fund", "agency": "Federal", "deadline": "2026-02-10" }
+        ]
+      },
+      "buildPrompt": "Render a modular admin dashboard with a left sidebar nav, KPI cards, an area chart, and a top results list. Follow NeurAI design tokens and prioritize compact density for power users."
+    },
+
+    {
+      "id": "bp-onboard-001",
+      "name": "Onboarding Flow — 3 screens",
+      "version": "1.0",
+      "meta": {
+        "author": "Cay / Q-MAX",
+        "created_at": "2025-12-03T00:30:00Z",
+        "purpose": "New user onboarding wizard (mobile-first)"
+      },
+      "screens": [
+        {
+          "id": "onb-1",
+          "name": "Welcome",
+          "type": "page",
+          "layout": { "template": "single-column", "mobileFirst": true },
+          "components": [
+            { "id": "hero", "type": "image", "props": { "src": "assets/welcome-hero.png", "alt": "welcome", "style_token": "img.hero" } },
+            { "id": "headline", "type": "text", "props": { "text": "Welcome to NeurAI", "style_token": "heading.lg" } },
+            { "id": "sub", "type": "text", "props": { "text": "We find the RFPs you actually qualify for.", "style_token": "body.md" } },
+            { "id": "next", "type": "button", "props": { "label": "Get Started", "variant": "primary", "onClick": { "action": "navigate", "target": "onb-2" } } }
+          ]
+        },
+        {
+          "id": "onb-2",
+          "name": "Preferences",
+          "type": "page",
+          "components": [
+            { "id": "q1", "type": "input_text", "props": { "label": "Organisation", "placeholder": "Your org name", "style_token": "input.default" } },
+            { "id": "q2", "type": "select_single", "props": { "label": "Focus Area", "options": ["Health", "Education", "Tech"], "style_token": "select.default" } },
+            { "id": "next2", "type": "button", "props": { "label": "Continue", "variant": "secondary", "onClick": { "action": "navigate", "target": "onb-3" } } }
+          ]
+        },
+        {
+          "id": "onb-3",
+          "name": "Finish",
+          "type": "page",
+          "components": [
+            { "id": "confirm", "type": "text", "props": { "text": "All set — we'll tailor results to your preferences.", "style_token": "body.md" } },
+            { "id": "done", "type": "button", "props": { "label": "Open Dashboard", "variant": "primary", "onClick": { "action": "navigate", "target": "dash-home" } } }
+          ]
+        }
+      ],
+      "buildPrompt": "Create a three-step onboarding for mobile: welcome hero, preferences form (org + focus), and finish screen that navigates to dashboard. Keep UI light and friendly."
+    },
+
+    {
+      "id": "bp-components-usage-001",
+      "name": "Component Library Usage Example",
+      "version": "1.0",
+      "meta": {
+        "author": "Q-MAX",
+        "created_at": "2025-12-03T01:00:00Z",
+        "notes": "Shows component tokens and intended props that CA must map to the CA component library."
+      },
+      "component_library": {
+        "tokens": {
+          "heading.xl": { "fontSize": 28, "fontWeight": 700 },
+          "header.compact": { "height": 56, "padding": 12 },
+          "card.kpi": { "padding": 12, "elevation": 1 },
+          "input.default": { "height": 44, "radius": 8 },
+          "button.primary": { "bg": "brand.primary", "radius": 8 }
+        },
+        "components": [
+          {
+            "id": "input_text",
+            "role": "input",
+            "props_schema": { "label": "string", "placeholder": "string", "required": "boolean" },
+            "usage": [ "collect simple string data", "use in forms", "validate on submit" ]
+          },
+          {
+            "id": "select_single",
+            "role": "selection",
+            "props_schema": { "options": "array", "default": "string" },
+            "usage": [ "single choice lists", "filters" ]
+          },
+          {
+            "id": "card",
+            "role": "container",
+            "props_schema": { "title": "string", "body": "string", "elevation": "number" },
+            "usage": [ "display summary, small stats" ]
+          }
+        ]
+      },
+      "screens": [],
+      "buildPrompt": "This payload defines NeurAI's component tokens and example usages. CA should map these tokens to the platform's native components and export a reusable component library artifact."
+    }
+  ]
+}
