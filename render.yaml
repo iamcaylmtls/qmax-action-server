@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: qmax-action-server
+    env: node
+    repo: https://github.com/iamcaylmtls/qmax-action-server
+    branch: main
+    buildCommand: npm ci
+    startCommand: npm start
+    plan: free
+    disk: 0
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: CA_BASE_URL
+        value: https://rfp-grant-intelligence-en-168.created.app
